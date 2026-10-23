@@ -26,10 +26,23 @@ class NewsNotifications {
         'category': category,
         'enabled': enabled,
       });
+  /// The native side accepts at most this many posts, matching the newest-100
+  /// window its background job fetches.
+  static const observeLimit = 100;
+
   Future<void> observe(List<OfficialNews> items) async {
     if (supported && items.isNotEmpty) {
+      final newest = [...items]
+        ..sort(
+          (a, b) => (b.publishedAt ?? DateTime.utc(1970)).compareTo(
+            a.publishedAt ?? DateTime.utc(1970),
+          ),
+        );
       await channel.invokeMethod<void>('observe', {
-        'items': items.map((e) => e.notificationData()).toList(),
+        'items': newest
+            .take(observeLimit)
+            .map((e) => e.notificationData())
+            .toList(),
       });
     }
   }

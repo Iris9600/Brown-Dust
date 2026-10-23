@@ -179,7 +179,10 @@ object NewsNotifier {
                 if (Thread.currentThread().isInterrupted) return
                 observe(context, records, code)
                 return
-            } catch (error: Exception) { failure = error }
+            } catch (error: Exception) {
+                failure = error
+                android.util.Log.w("OfficialNewsJob", "Official feed $locale failed", error)
+            }
         }
         if (!Thread.currentThread().isInterrupted) {
             prefs(context).edit().putString("error", "无法同步官方公告，将在有网络时重试。${failure?.javaClass?.simpleName ?: ""}").apply()

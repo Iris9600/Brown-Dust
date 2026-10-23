@@ -60,6 +60,27 @@ void main() {
       expect(record['categories'], contains('banners'));
     },
   );
+  test('A two-month feed over 100 posts sends only the newest 100', () async {
+    final start = DateTime.utc(2026, 8, 24);
+    final items = [
+      for (var i = 0; i < 128; i++)
+        OfficialNews(
+          id: 'id$i',
+          title: 'Post $i',
+          content: '',
+          tag: 'notice',
+          locale: 'zh-cn',
+          publishedAt: start.add(Duration(hours: 10 * i)),
+        ),
+    ]..shuffle();
+    await NewsNotifications().observe(items);
+    final sent = (calls.single.arguments as Map)['items'] as List;
+    expect(sent, hasLength(NewsNotifications.observeLimit));
+    final ids = {for (final record in sent) (record as Map)['id']};
+    expect(ids, contains('id127'));
+    expect(ids, contains('id28'));
+    expect(ids, isNot(contains('id27')));
+  });
   test(
     'Reminder sends an absolute instant independent of phone time zone',
     () async {
