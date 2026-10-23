@@ -2,6 +2,7 @@
 # 1. A Node script looks for new official notices (no Claude usage when there are none).
 # 2. Claude reads the new notices and edits lib/mission_data.dart only when routines change.
 # 3. This script runs analyze + tests, then commits or reverts, and shows a Windows toast.
+# 4. Commits are pushed to origin/Developing (Solar-owo's saved login); the user merges to main.
 # Log: .tool/logs/update-check.log
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -17,6 +18,10 @@ $state = Join-Path $toolDir 'bd2-watch-state.json'
 $stateBackup = "$state.bak"
 $pending = Join-Path $toolDir 'pending-notices.json'
 $result = Join-Path $toolDir 'bd2-update-result.txt'
+$branch = 'Developing'
+# Never open a sign-in prompt from the background; fail and retry next run instead.
+$env:GCM_INTERACTIVE = 'never'
+$env:GIT_TERMINAL_PROMPT = '0'
 
 function Write-Log([string]$message) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $message" | Out-File -FilePath $log -Append -Encoding utf8
@@ -45,6 +50,37 @@ function Invoke-Logged([string]$file, [string[]]$arguments) {
     return $LASTEXITCODE
 }
 
+function Get-CurrentBranch {
+    $ErrorActionPreference = 'Continue'
+    return "$(& git rev-parse --abbrev-ref HEAD 2>$null)".Trim()
+}
+
+# Push local Developing commits that GitHub doesn't have yet. Never force-pushes.
+# $notify shows a toast on failure (used right after a new commit, not on silent retries).
+function Push-Pending([bool]$notify) {
+    $ErrorActionPreference = 'Continue'
+    if ((Get-CurrentBranch) -ne $branch) { return }
+    if ((Invoke-Logged 'git' @('fetch', '-q', 'origin', $branch)) -ne 0) {
+        Write-Log 'Push skipped: could not reach GitHub; will retry next run.'
+        if ($notify) { Show-Toast 'BD2 update not pushed yet' 'Committed locally; GitHub unreachable. Will retry next run.' }
+        return
+    }
+    $ahead = [int]"$(& git rev-list --count "origin/$branch..$branch" 2>$null)"
+    if ($ahead -eq 0) { return }
+    $behind = [int]"$(& git rev-list --count "$branch..origin/$branch" 2>$null)"
+    if ($behind -gt 0) {
+        Write-Log "Push skipped: origin/$branch has $behind commit(s) not on this PC. Needs a manual pull."
+        if ($notify) { Show-Toast 'BD2 update not pushed' "GitHub $branch has newer commits. Ask Claude to sync the branch." }
+        return
+    }
+    if ((Invoke-Logged 'git' @('push', 'origin', $branch)) -eq 0) {
+        Write-Log "Pushed $ahead commit(s) to origin/$branch."
+    } else {
+        Write-Log 'Push failed; will retry next run.'
+        if ($notify) { Show-Toast 'BD2 update not pushed yet' 'Committed locally; push failed. See .tool/logs/update-check.log' }
+    }
+}
+
 # Only ever revert edits made during this run, never the user's own work.
 $script:ownsTree = $false
 function Undo-Changes {
@@ -54,6 +90,7 @@ function Undo-Changes {
 try {
     if (Test-Path $state) { Copy-Item $state $stateBackup -Force }
     Remove-Item $pending, $result -ErrorAction SilentlyContinue
+    Push-Pending $false
 
     if ((Invoke-Logged 'node' @('tool/check_bd2_updates.mjs', '--out', $pending)) -ne 0) {
         throw 'Notice check failed'
@@ -68,6 +105,9 @@ try {
     }
     Write-Log "New notices: $(($notices | ForEach-Object { $_.subject }) -join ' | ')"
 
+    if ((Get-CurrentBranch) -ne $branch) {
+        throw "Current branch is not $branch; skipping so nothing is committed elsewhere"
+    }
     if (& git status --porcelain -- lib test) {
         throw 'lib/ or test/ has uncommitted changes; skipping so they are not overwritten'
     }
@@ -108,7 +148,8 @@ try {
     if ((Invoke-Logged 'git' @('commit', '-q', '-m', $message)) -ne 0) { throw 'git commit failed' }
     $hash = (& git rev-parse --short HEAD).Trim()
     Write-Log "Committed $hash"
-    Show-Toast 'BD2 checklist updated' "$summary ($hash). Run flutter run to install on your phone."
+    Show-Toast 'BD2 checklist updated' "$summary ($hash). Pushing to $branch for your review; run flutter run to install."
+    Push-Pending $true
 } catch {
     Write-Log "ERROR: $($_.Exception.Message)"
     # Restore seen state so these notices are retried next run.
