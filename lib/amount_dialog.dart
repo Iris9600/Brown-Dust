@@ -37,7 +37,15 @@ class _AmountDialogState extends State<AmountDialog> {
                 TextFormField(
                   controller: _controllers[resource],
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: resource),
+                  decoration: InputDecoration(
+                    labelText: resource,
+                    prefixIcon: Icon(
+                      resource == '钻石'
+                          ? Icons.diamond_outlined
+                          : Icons.inventory_2_outlined,
+                      size: 20,
+                    ),
+                  ),
                   validator: (value) {
                     final number = int.tryParse(value ?? '');
                     return number == null || number < 0 || number > 100000000

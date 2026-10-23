@@ -6,6 +6,8 @@ import 'resource_history.dart';
 import 'app_design.dart';
 import 'mission_schedule.dart';
 import 'announcements/news_hub.dart';
+import 'amount_dialog.dart';
+import 'mission_data.dart';
 
 void main() => runApp(const MyApp());
 
@@ -19,42 +21,6 @@ class MyApp extends StatelessWidget {
     home: const MissionPage(),
   );
 }
-
-// Only independently confirmed gem rewards have a nonzero default.
-const daily = [
-  ['领取每日免费抽卡', '查看服装与装备卡池；次数以卡池显示为准', 0],
-  ['完成每日任务', '合计 60 钻石；在任务页领取', 60],
-  ['收取派遣奖励', '钻石及随机资源，填写实际获得的钻石', 0],
-  ['领取末日之书奖励', '金币、古代水晶等；随历史最高成绩变化', 0],
-  ['快速狩猎：白饭', '史莱姆经验、金币或装备制作材料', 0],
-  ['快速狩猎：火炬', '属性石，用于角色服装潜能培养', 0],
-  ['镜中之战 PvP', '斗争奖牌、排名积分及任务进度', 0],
-  ['赛季活动战斗', '活动代币、首次通关钻石；填写实际钻石', 0],
-  ['格鲁菲餐厅结算与顾客', '经营奖励、随机钻石或属性石、装饰币', 0],
-  ['领取通行证任务与奖励', '通行证经验、抽卡券及其他等级奖励', 0],
-  ['访问小屋、装备制作/强化等', '按任务要求访问/点赞小屋、制作、强化、精炼与分解装备；只推进任务，不重复计算奖励', 0],
-  ['角色好感度互动', '好感度经验，逐步解锁对应奖励', 0],
-  ['检查邮箱与登录活动', '签到、补偿、活动礼物、抽卡券等', 0],
-  ['幻想广场：女神像祈祷', 'FANTASIA SQUARE 喷泉附近互动；奖励以游戏显示为准', 0],
-  ['领取公会每日签到奖励', '加入公会后检查签到与可领取奖励；突袭另外按开放日程参与', 0],
-  ['领取傲慢之塔每日记录奖励', '达到对应记录后领取恶魔币、古代水晶等；无需每日重新爬塔', 0],
-];
-const weekly = [
-  ['完成每周任务', '固定 200 钻石', 200],
-  ['镜中之战排名结算', '400–2000 钻石，填写本周实际排名奖励', 0],
-  ['黄金竞技场', '赛季任务最多 900 奥伦币，另有排名奖励', 0],
-  ['末日之书至少挑战一次', '刷新伤害纪录、完成对应周任务', 0],
-  ['街机游戏每周参与', '每周任务相关资源，非主要钻石来源', 0],
-  ['公会内容与公会突袭', '公会奖励及养成资源，按当前开放玩法', 0],
-  ['恶魔城爬塔与积分', '首次通关奖励、恶魔币、古代水晶', 0],
-  ['赛季通行证进度检查', '等级奖励、抽卡券及养成资源', 0],
-  ['限定活动与商店结算', '抽卡券、限定资源、活动装备等', 0],
-  ['幻想广场：每周金币拾取', 'FANTASIA SQUARE 右上广场检查发光拾取点；金币不折算钻石', 0],
-  ['魔兽追踪者：讨伐与奖励检查', '开放期间完成挑战并领取阶段/排名奖励；周期与次数以当期公告为准，勿与活动战斗重复记账', 0],
-  ['救赎之塔：赛季进度与领奖', '每周检查当前赛季进度、挑战机会与可领取奖励；按赛季结算，不表示每周重置', 0],
-];
-
-const resourceNames = ['钻石', '抽卡券', '金币', '古代水晶', '属性石', '恶魔币', '装饰币', '奥伦币'];
 
 class MissionPage extends StatefulWidget {
   const MissionPage({super.key, this.now = DateTime.now});
@@ -678,81 +644,4 @@ class _MissionPageState extends State<MissionPage> with WidgetsBindingObserver {
       ),
     );
   }
-}
-
-class AmountDialog extends StatefulWidget {
-  const AmountDialog({super.key, required this.initial});
-  final Map<String, int> initial;
-  @override
-  State<AmountDialog> createState() => _AmountDialogState();
-}
-
-class _AmountDialogState extends State<AmountDialog> {
-  late final Map<String, TextEditingController> _controllers = {
-    for (final resource in resourceNames)
-      resource: TextEditingController(text: '${widget.initial[resource] ?? 0}'),
-  };
-  final _form = GlobalKey<FormState>();
-  @override
-  void dispose() {
-    for (final controller in _controllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('实际获得资源'),
-    content: Form(
-      key: _form,
-      child: SizedBox(
-        width: 360,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final resource in resourceNames)
-                TextFormField(
-                  controller: _controllers[resource],
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: resource,
-                    prefixIcon: Icon(
-                      resource == '钻石'
-                          ? Icons.diamond_outlined
-                          : Icons.inventory_2_outlined,
-                      size: 20,
-                    ),
-                  ),
-                  validator: (value) {
-                    final number = int.tryParse(value ?? '');
-                    return number == null || number < 0 || number > 100000000
-                        ? '请输入 0 至 100000000 的整数'
-                        : null;
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
-      ),
-      FilledButton(
-        onPressed: () {
-          if (_form.currentState!.validate()) {
-            Navigator.pop(context, {
-              for (final entry in _controllers.entries)
-                entry.key: int.parse(entry.value.text),
-            });
-          }
-        },
-        child: const Text('保存'),
-      ),
-    ],
-  );
 }
