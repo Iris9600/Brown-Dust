@@ -8,6 +8,7 @@ import 'mission_schedule.dart';
 import 'announcements/news_hub.dart';
 import 'amount_dialog.dart';
 import 'mission_data.dart';
+import 'mission_widgets.dart';
 
 void main() => runApp(const MyApp());
 
@@ -213,10 +214,6 @@ class _MissionPageState extends State<MissionPage> with WidgetsBindingObserver {
     '钻石': _amount(tab, index),
   };
 
-  int _sevenDayTotal(String resource) {
-    return _history.total(resource);
-  }
-
   void _save() {
     _prune();
     final snapshot = jsonEncode({
@@ -306,6 +303,24 @@ class _MissionPageState extends State<MissionPage> with WidgetsBindingObserver {
     }
   }
 
+  void _toggle(int index, bool checked) {
+    final id = _id(_tab, index);
+    setState(() {
+      _prune();
+      if (checked) {
+        if (_done.add(id)) {
+          final date = ResourceHistory.dateKey(widget.now());
+          _completedDates[id] = date;
+          _history.adjust(date, _reward(_tab, index), 1);
+        }
+      } else if (_done.remove(id)) {
+        final date = _completedDates.remove(id);
+        if (date != null) _history.adjust(date, _reward(_tab, index), -1);
+      }
+    });
+    _save();
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = _items(_tab);
@@ -383,96 +398,13 @@ class _MissionPageState extends State<MissionPage> with WidgetsBindingObserver {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Card(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 220),
-                            child: SingleChildScrollView(
-                              child: Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'ADVENTURER’S JOURNAL',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        letterSpacing: 2,
-                                        color: AppDesign.gold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    const Text(
-                                      '资源总览 · 最近 7 天',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${_sevenDayTotal('钻石')} 钻石',
-                                      key: const Key('sevenDayGems'),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.headlineMedium,
-                                    ),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 4,
-                                      children: [
-                                        for (final resource
-                                            in resourceNames.skip(1))
-                                          Chip(
-                                            label: Text(
-                                              '$resource ${_sevenDayTotal(resource)}',
-                                            ),
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text('当前清单 · 已获得钻石'),
-                                    Text(
-                                      '${_earned(0) + _earned(1)} 钻石',
-                                      key: const Key('totalGems'),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.headlineMedium,
-                                    ),
-                                    Text(
-                                      '每日 ${_earned(0)}  ·  每周 ${_earned(1)}',
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      '按马来西亚时间（MYT / UTC+8）保存，只保留今天与前 6 天。每日清单于 00:00 自动重置；收益按原日期保留。每周清单于周一 00:00 自动重置；每日重置不影响每周进度。',
-                                    ),
-                                    const SizedBox(height: 12),
-                                    const Text(
-                                      '每日收益明细',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    for (final date
-                                        in ResourceHistory.retainedDates(
-                                          widget.now(),
-                                        ))
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 4,
-                                        ),
-                                        child: Text(
-                                          '$date  ·  ${resourceNames.map((name) => "$name ${_history.days[date]?[name] ?? 0}").join(" / ")}',
-                                        ),
-                                      ),
-                                    const Text(
-                                      '旧版已勾选任务按升级当天导入；无日期的历史累计无法归入最近 7 天，已移除。',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                        child: SummaryCard(
+                          history: _history,
+                          retainedDates: ResourceHistory.retainedDates(
+                            widget.now(),
                           ),
+                          dailyEarned: _earned(0),
+                          weeklyEarned: _earned(1),
                         ),
                       ),
                       SegmentedButton<int>(
@@ -522,117 +454,22 @@ class _MissionPageState extends State<MissionPage> with WidgetsBindingObserver {
                           itemCount: items.length + 1,
                           itemBuilder: (context, index) {
                             if (index == items.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '收益与领取提醒',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      '• 在线核对：2026-10-16。清单包含日常、每周检查及开放期间可选事项；具体开放条件与周期以游戏公告为准。\n'
-                                      '• 同一笔奖励只填写在一个条目；特别是活动战斗、魔兽追踪者、通行证与活动结算。新增事项默认 0 钻，非钻石资源不计入总额。\n'
-                                      '• 每日任务 7 天共 420 钻 + 每周任务 200 钻 + PvP 400–2000 钻：一周 1020–2620 钻，需满足对应条件。此估算不计入已获得。\n'
-                                      '• 赛季活动任务、商店与魔兽追踪者奖励可能随版本调整；以当期奖励页为准，按各自周期领取，勿当作固定每周收入。\n'
-                                      '• 派遣与餐厅钻石不固定；派遣约 25 钻的估计不可当作固定收入。\n'
-                                      '• 末日之书与傲慢之塔达到纪录后记得领取每日奖励，无需每天重复挑战。\n'
-                                      '• 部分事项只推进每日/每周任务，完成后记得进入任务页领奖。\n'
-                                      '• 数据保存在当前设备，仅保留 MYT 今天与前 6 天的收益。每日 00:00 自动重置并保存；关闭时下次打开补做。每周清单于周一 00:00 自动重置；每日重置不影响每周进度。',
-                                    ),
-                                  ],
-                                ),
-                              );
+                              return const ChecklistTips();
                             }
                             final item = items[index];
                             final id = _id(_tab, index);
-                            return Card(
-                              color: _done.contains(id)
-                                  ? const Color(0xFF202F2B)
-                                  : AppDesign.panel,
-                              shape: BeveledRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(
-                                  color: _done.contains(id)
-                                      ? const Color(0xFF557964)
-                                      : AppDesign.border,
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  CheckboxListTile(
-                                    key: ValueKey(id),
-                                    controlAffinity:
-                                        ListTileControlAffinity.leading,
-                                    title: Text(
-                                      item[0] as String,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: _done.contains(id)
-                                            ? AppDesign.mint
-                                            : const Color(0xFFF2EDE2),
-                                      ),
-                                    ),
-                                    subtitle: Text(item[1] as String),
-                                    value: _done.contains(id),
-                                    onChanged: _failed
-                                        ? null
-                                        : (checked) {
-                                            setState(() {
-                                              _prune();
-                                              if (checked!) {
-                                                if (_done.add(id)) {
-                                                  final date =
-                                                      ResourceHistory.dateKey(
-                                                        widget.now(),
-                                                      );
-                                                  _completedDates[id] = date;
-                                                  _history.adjust(
-                                                    date,
-                                                    _reward(_tab, index),
-                                                    1,
-                                                  );
-                                                }
-                                              } else {
-                                                if (_done.remove(id)) {
-                                                  final date = _completedDates
-                                                      .remove(id);
-                                                  if (date != null) {
-                                                    _history.adjust(
-                                                      date,
-                                                      _reward(_tab, index),
-                                                      -1,
-                                                    );
-                                                  }
-                                                }
-                                              }
-                                            });
-                                            _save();
-                                          },
-                                  ),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton.icon(
-                                      onPressed: _failed
-                                          ? null
-                                          : () => _editAmount(index),
-                                      icon: const Icon(
-                                        Icons.diamond_outlined,
-                                        size: 18,
-                                        color: AppDesign.crystal,
-                                      ),
-                                      label: Text(
-                                        '${_amount(_tab, index)} 钻石 · 填写实际奖励',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            return TaskCard(
+                              id: id,
+                              title: item[0] as String,
+                              subtitle: item[1] as String,
+                              done: _done.contains(id),
+                              amount: _amount(_tab, index),
+                              onChanged: _failed
+                                  ? null
+                                  : (checked) => _toggle(index, checked),
+                              onEditAmount: _failed
+                                  ? null
+                                  : () => _editAmount(index),
                             );
                           },
                         ),
