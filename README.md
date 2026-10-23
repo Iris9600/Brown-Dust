@@ -1,42 +1,120 @@
-# 棕色尘埃 2 任务清单
+# 棕色尘埃 2 任务清单 (Brown Dust 2 Mission Checklist)
 
-Chinese daily (16 items) and weekly (12 items) checklist, based on the supplied list and online review on 2026-10-16. Weekly entries include seasonal progress checks; they do not imply weekly reward resets.
-Checking adds the configured gem reward; unchecking subtracts it. Fixed defaults are 60 daily and 200 weekly. Variable rewards start at zero: enter actual amounts using each item's reward button. Tickets and resources are not converted into gems.
+A Flutter app for Brown Dust 2 players. It tracks daily and weekly routines and the rewards you earn, and it collects official news, summon banners and reminders. The UI is in Simplified Chinese.
 
-Progress and actual amounts persist locally using shared_preferences. The main-page dashboard tracks the last seven calendar days of earned gems, draw tickets, gold, ancient crystals, attribute stones, devil coins, decoration coins and Oren coins separately, with a daily breakdown. Use each mission's reward button to enter actual amounts, then check it to count those rewards. Editing or unchecking completed items adjusts the original completion date.
+## Quick start
 
-Only today and the previous six days are retained, using Malaysia time (MYT / UTC+8), independent of the device time zone (not a rolling 168-hour interval). Older and future-dated earnings are deleted on opening, resuming, saving, and every minute while running. Closed apps clean up on the next launch. Expired completed-task metadata is also removed; checklist definitions and configuration remain available.
+```sh
+flutter run        # launch on a device or emulator
+flutter analyze    # static analysis
+flutter test       # unit and widget tests
+```
 
-The daily checklist automatically resets at 00:00 MYT, clearing its checks and entered reward amounts and restoring fixed defaults. A midnight timer handles active apps; opening or resuming catches up after missed midnights. Each reset saves the new daily date and checklist locally. The weekly checklist independently resets every Monday at 00:00 MYT, clearing weekly checks and entered amounts and restoring fixed defaults. Daily resets never clear weekly progress. Both period dates are saved; reopening or resuming catches up after a missed daily or Monday reset. Legacy saves infer their weekly period from dated weekly progress or the last saved daily date. Reward dialogs opened before their period reset must be reopened before saving. Manual resets affect only the selected checklist. All resets leave dated earnings in place. Resetting an empty list does not count anything twice. Legacy checked tasks without dates are imported as today's records once. Undated legacy lifetime archives are removed because their age cannot be verified; no indefinite lifetime aggregate is retained. Earnings are not an in-game inventory balance and do not subtract spending. Event reward guidance stays separate to avoid counting per-event rewards as weekly earnings.
+## Project layout
 
-Run `flutter run`. Verify using `flutter analyze` and `flutter test`.
+| Path | Purpose |
+| --- | --- |
+| `lib/main.dart` | App entry, `MissionPage` state, persistence and MYT resets |
+| `lib/mission_data.dart` | Daily/weekly checklist definitions and resource names |
+| `lib/mission_widgets.dart` | Summary card, task card and tips footer |
+| `lib/amount_dialog.dart` | "Actual rewards" entry dialog |
+| `lib/resource_history.dart` | Seven-day MYT earnings history |
+| `lib/mission_schedule.dart` | Weekly (Monday MYT) period keys |
+| `lib/app_design.dart` | Shared colors, theme and component styles |
+| `lib/announcements/` | News hub, official API client, summon banners, YouTube uploads, notifications |
+| `android/app/src/main/kotlin/` | Background news job and reminder receiver |
+| `tool/` | Icon generation and web build scripts |
 
-The app uses a Brown Dust 2–inspired fantasy journal theme: charcoal panels, beveled gold borders, crystal-blue reward icons, and sage-green completion states. Shared colors and component styles live in `lib/app_design.dart`. The design uses native Flutter widgets and icons without external artwork or font downloads. The checklist IDs, local save format, and MYT reset behavior remain unchanged.
+## Checklists and rewards
 
-Online review added Fantasia Square prayer and weekly gold collection, guild attendance, Tower of Pride daily reward collection, Fiend Hunter and Tower of Salvation season checks. Existing equipment task guidance now mentions refining and dismantling. Existing item positions were retained so saved checks and amounts remain attached to their original tasks.
+- **16 daily** and **12 weekly** items, based on the supplied list and an online review on 2026-10-16. Weekly entries include seasonal progress checks; they do not imply weekly reward resets.
+- Checking an item adds its gem reward; unchecking subtracts it. Fixed defaults are **60** (daily missions) and **200** (weekly missions). Variable rewards start at 0: use each item's reward button to enter the actual amounts.
+- Tracked resources: gems, draw tickets, gold, ancient crystals, attribute stones, devil coins, decoration coins and Oren coins. They are counted separately; tickets and resources are never converted into gems.
+- Earnings are not an in-game inventory balance and do not subtract spending. Event reward guidance is kept separate so per-event rewards are not counted as weekly income.
+- This is a recurring-activity checklist, not a full catalog of one-time clears, achievements or temporary events.
+- Item positions are stable, so saved checks and amounts stay attached to their original tasks across updates.
 
-Sources:
-- [Daily routine guide (Feb 2026)](https://volx.jp/browndust2-daily-mission/) — Fantasia Square, equipment and routine details.
-- [Daily routines](https://dotgg.gg/brown-dust-2/beginners-guide-daily-routines-guide/) — tower collection and routine context.
-- [Guild update](https://dotgg.gg/brown-dust-2/july-3rd-utc-routine-maintenance-and-update/) — daily guild attendance rewards.
-- [Fiend Hunter calculator and version notes](https://botan14xd.github.io/BD2-Overview/misc/fh-calc/) — current weekly versus archived daily formats.
-- [Tower of Salvation guide](https://dotgg.gg/brown-dust-2/tower-of-salvation-quick-start-guide/) — seasonal progression and rewards.
+## Time zone, resets and retention
 
-This is a recurring-activity checklist, not a complete catalog of one-time story clears, achievements or every temporary event. Check current in-game announcements for availability and rewards.
+All dates use **Malaysia time (MYT, UTC+8)**, regardless of the device's time zone.
 
-The custom gold quest-journal launcher icon is stored at `assets/branding/app-icon.png`. Android, iOS and web sizes are generated by `tool/update_app_icons.ps1`. Regenerate on Windows with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tool/update_app_icons.ps1`; this sets the script policy only for that process. Rebuild and reinstall the app to update its installed launcher icon.
+- **Daily reset:** at 00:00 MYT, clears daily checks and entered amounts and restores the fixed defaults.
+- **Weekly reset:** on Monday at 00:00 MYT, done the same way for the weekly list. Daily resets never touch weekly progress.
+- **Catch-up:** a timer handles the reset while the app is open. Opening or resuming the app catches up on any missed resets.
+- **Retention:** only today and the previous six calendar days of earnings are kept. Older and future-dated records are removed on open, resume, save and every minute while running.
+- **Manual reset** affects only the selected list. All resets leave dated earnings in place. Editing or unchecking an item adjusts its original completion date.
+- **Stale dialogs:** a reward dialog opened before a reset must be reopened before it can save.
+- **Legacy saves:** undated checked tasks are imported once as today's records. Undated lifetime totals are removed because their age can't be verified.
 
-The megaphone button opens Events, Updates, Summon Banners, and Notifications. The app uses the current official API at https://webapi.browndust2.com/api/notices with locale=zh-cn, falling back to en-us. The former newsData_cn.json export is retired and stops in May 2026; using it caused the two-month filter to hide all announcements in October. The current API uses items, category, publishedAt, and contentPreview, with full contentHtml available from /api/notices/{id}. The app paginates until it reaches posts older than two calendar months, preserves publication dates, maps inspection to Maintenance and event to Events, and caches results locally. It loads complete pickup/update notices for summon extraction and complete article text when opening a preview. Android background polling uses the same current API and category mapping. Live verification on the connected phone confirmed October 2026 posts in the replacement API.
+Data is stored locally with `shared_preferences` under the `checklist_v1` key.
 
-Official event types appear in Events; notice and maintenance types appear in Updates. Pickup information is also used for Summon Banners. The Summon Banners page presents **individual unit/costume cards** with a locally associated official picture, name, and labeled summon period. It extracts only explicit pickup sections or standalone named pickup posts, and does not show patch/event articles as banner cards. It does not borrow an article header image or dates from another unit. Mixed patch/event articles still require a locally associated picture and labeled summon period. Named standalone pickup posts also support a published closing-date sentence (including Chinese promotional wording). A named official pickup poster without a text schedule remains visible with an explicit unverified-schedule badge; no dates are invented from the image. Tapping a poster opens a full-screen view with pinch-to-zoom, so printed schedules remain readable. Rates, limited/rerun status, and exclusive gear are shown when the unit section provides them. Explicit clock times with a timezone are converted to MYT; maintenance/date-only boundaries remain verbatim. Ended banners with verified exact end times are hidden automatically. Unknown exact times are never labeled as ongoing. Duplicate unit/period records use the newest official source. Banner reminders use independent IDs, so units featured in one patch note do not overwrite each other. Live extraction still needs a device/online check because the official feed cannot be fetched from this environment. Each detail page links to the [official news website](https://www.browndust2.com/en-us/news).
+## News, updates and summon banners
 
-Android notifications use the platform's `JobScheduler`, `NotificationManager`, and inexact `AlarmManager` alarms through `bd2/announcements`. Enable them in the Notifications page and grant Android notification permission. Choose event, update and/or banner alerts. Opening the hub refreshes the feed, refreshes again when resumed, and checks every 15 minutes while that page stays open. Once enabled, a persisted background job checks approximately hourly even when the Flutter screen is closed. The first successful sync for each source language establishes a baseline without notifying for historical posts. Subsequent new or revised posts are deduplicated; more than five changes produce a single summary. Turning automatic announcements off cancels background checks without deleting separately scheduled reminders. No Firebase project, cloud account or server keys are required. These are periodic local alerts, not instant server push. Android can delay jobs or alarms during battery-saving/offline states; a force-stopped application cannot resume work until Android permits it or the user reopens it. See [Android periodic jobs](https://developer.android.com/reference/android/app/job/JobInfo.Builder#setPeriodic(long)) and [alarm delivery](https://developer.android.com/develop/background-work/services/alarms).
+The megaphone button opens **Events**, **Updates**, **Summon Banners** and **Notifications**.
 
-Use **Set Reminder** on a post to choose a future date and time in MYT. One reminder per official post or individual banner is saved; setting another for the same item replaces it. The notification page lists upcoming/recently due reminders, supports cancellation, and shows the most recent 50 delivered alerts. Reminders are restored after reboot/app replacement; recently missed reminders can be delivered on restore. Notification taps open the corresponding official post in the browser. System permission, notification-channel preferences and battery controls still apply. Reminders and announcement storage are separate from checklist progress and earnings. Native small notification artwork is `android/app/src/main/res/drawable/ic_stat_quest.xml`, separate from the full-color launcher icon.
+- **Source:** the official API `https://webapi.browndust2.com/api/notices` (`locale=zh-cn`, falling back to `en-us`), with full article HTML from `/api/notices/{id}`. The old `newsData_cn.json` export stopped in May 2026 and is no longer used.
+- **Categories:** `event` → Events, while `notice` and `inspection` (maintenance) → Updates. Pickup notices are also parsed for summon banners.
+- **Retention:** posts older than two calendar months are deleted from memory and from the cache before refresh, on open, and every minute while active.
+- **Summon banner cards:** each card shows one unit or costume, with its official picture, name and labelled summon period.
+  - Only explicit pickup sections or standalone pickup posts are used. Patch and event articles never become cards.
+  - Dates are never borrowed from another unit or guessed from images. A poster with no text schedule shows an "unverified schedule" badge.
+  - Times with an explicit timezone are converted to MYT. Date-only and maintenance boundaries are shown verbatim.
+  - Banners with a verified end time are hidden once they end. Duplicates keep the newest official source.
+  - Tap a poster to zoom it full-screen.
+- **YouTube uploads:** costume, skin and PV videos come from [@browndust2_en](https://www.youtube.com/@browndust2_en/videos), use the same two-month window, and show their verified upload date. Upload dates are never treated as summon dates.
+- Detail pages link to the [official news site](https://www.browndust2.com/en-us/news). The Summon page links to the [Chinese news index](https://www.browndust2.com/zh-cn/news?page=1&type=all).
 
-Verification for this change: Dart analysis and tests cover feed parsing, classification, invalid responses, language fallback, offline caching, small-phone navigation, permission rejection and the Android method-channel contract. The Android Kotlin sources were type-checked against the Android SDK and Flutter embedding. The debug APK built and was installed on the connected SM N986B. Live foreground sync and both tabs were visually verified with October 2026 posts. Reboot behavior and scheduled notification delivery still need a physical-device check. To verify on a phone, build/install the Android app, open the megaphone button, refresh while online, enable notifications, send a test notification, schedule a reminder, close the app, and check delivery. Publishing a web build does not add Android background notifications.
-The reference selected by the user is the [official Chinese news index](https://www.browndust2.com/zh-cn/news?page=1&type=all). The Summon page includes a direct link to that exact page. Current live units and dates could not be confirmed here: the page exposes only its static shell to the web reader, and the news JSON export is unreachable from the restricted execution environment. The code still fetches official sources when run online; tests use clearly isolated fixtures rather than shipping historical indexed banners as current data.
+## Android notifications
 
-Summon cards load costume, skin, and PV uploads from https://www.youtube.com/@browndust2_en/videos. Desktop videoRenderer, current lockupViewModel, and escaped mobile videoWithContextRenderer listing formats are supported, including continuation pages. Upload dates come from each matching official video page and are verified against the channel ID; relative listing ages are not used as dates. Only uploads within the same rolling two-calendar-month window as Events are kept. Older cached video cards are deleted on opening, refreshing, and each minute while active, including offline use. The undated v1 cache is removed during migration. Cards show their thumbnail, upload date, a play button and original video link; upload dates are never treated as summon dates. Unconfirmed summon periods retain a close button with saved dismissals. Live mobile channel parsing and exact publication metadata were verified through the connected phone.
+Implemented natively (Kotlin) using `JobScheduler`, `NotificationManager` and inexact `AlarmManager` alarms over the `bd2/announcements` method channel. No Firebase or server is needed.
 
-Events and Updates retention deletes messages older than the rolling two-calendar-month cutoff from memory and the saved news cache. Cleanup runs before network refresh, while opening the news page, and every minute while the news repository is active, including offline use. Closed apps clean up when news is next opened. Active and undated summon cards are stored separately with source link metadata and no article body, so deleting old news does not delete an eligible summon card. Confirmed cards are removed when their summon period ends.
+- Turn alerts on in the Notifications page and grant notification permission. You can choose event, update and banner alerts.
+- **While the hub is open:** it refreshes on open, on resume and every 15 minutes.
+- **In the background:** a persisted job checks roughly every hour.
+- **First sync:** the first sync for each language only sets a baseline; old posts don't trigger alerts.
+- **Grouping:** new or revised posts are deduplicated. More than five changes are combined into one summary alert.
+- **Reminders:** use **Set Reminder** on any post or banner to pick a future MYT time.
+  - Each post or banner keeps one reminder; setting a new one replaces it.
+  - Reminders survive reboot and app updates, and recently missed ones are delivered when restored.
+  - Turning automatic alerts off does not cancel reminders.
+- The page lists upcoming reminders and the 50 most recent alerts. Tapping a notification opens the official post.
+- These are periodic local alerts, not instant push. Android may delay them in battery-saver or offline states, and a force-stopped app can't run until it is reopened.
+- The small notification icon is `android/app/src/main/res/drawable/ic_stat_quest.xml`.
+
+See [JobInfo.Builder#setPeriodic](https://developer.android.com/reference/android/app/job/JobInfo.Builder#setPeriodic(long)) and [alarm delivery](https://developer.android.com/develop/background-work/services/alarms).
+
+### Manual device check
+
+Reboot behaviour and scheduled delivery still need checking on a physical device:
+
+1. Build and install the Android app.
+2. Open the megaphone, refresh while online and turn on notifications.
+3. Send a test notification and schedule a reminder.
+4. Close the app and confirm the reminder arrives, including after a reboot.
+
+A web build does not include Android background notifications.
+
+## Design and icons
+
+- The theme is inspired by Brown Dust 2's fantasy journal look: charcoal panels, beveled gold borders, crystal-blue reward icons and sage-green completed states. It uses native Flutter widgets only, with no external artwork or font downloads.
+- The launcher icon source is `assets/branding/app-icon.png`. To regenerate the Android, iOS and web sizes, run:
+
+  ```powershell
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File tool/update_app_icons.ps1
+  ```
+
+  Then rebuild and reinstall the app.
+
+## Testing
+
+The tests cover MYT resets and retention, legacy migration, reward validation, feed parsing and classification, language fallback, offline caching, summon extraction, YouTube parsing, small-phone layouts, permission rejection and the Android method-channel contract. Live feeds use isolated fixtures, so no historical banners ship as current data.
+
+## Sources
+
+- [Daily routine guide (Feb 2026)](https://volx.jp/browndust2-daily-mission/): Fantasia Square, equipment and routine details
+- [Daily routines](https://dotgg.gg/brown-dust-2/beginners-guide-daily-routines-guide/): tower collection and routine context
+- [Guild update](https://dotgg.gg/brown-dust-2/july-3rd-utc-routine-maintenance-and-update/): daily guild attendance rewards
+- [Fiend Hunter calculator and version notes](https://botan14xd.github.io/BD2-Overview/misc/fh-calc/): current weekly versus archived daily formats
+- [Tower of Salvation guide](https://dotgg.gg/brown-dust-2/tower-of-salvation-quick-start-guide/): seasonal progression and rewards
+
+Always check current in-game announcements for availability and rewards.
